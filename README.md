@@ -68,3 +68,9 @@ Deux modes :
 **Conseils :**
 - Défilement continu : faites défiler régulièrement, sans à-coups trop rapides. Si des pages sont mal coupées, essayez *Précision : fine*.
 - Page par page : si des pages manquent, raccourcissez la *pause minimale* ou augmentez la *sensibilité*.
+
+---
+
+# RSI & Alertes pour la watchlist Google Sheets
+
+Module Apps Script (`google-sheets/watchlist-rsi-alertes`) : colonne RSI journalier, alertes RSI à seuils réglables, zones ProRealTime avec alerte à moins de 3 %, contrôle et e-mail chaque soir. Installation : voir [son README](google-sheets/watchlist-rsi-alertes/README.md).
