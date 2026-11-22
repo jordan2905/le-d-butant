@@ -68,3 +68,30 @@ Deux modes :
 **Conseils :**
 - Défilement continu : faites défiler régulièrement, sans à-coups trop rapides. Si des pages sont mal coupées, essayez *Précision : fine*.
 - Page par page : si des pages manquent, raccourcissez la *pause minimale* ou augmentez la *sensibilité*.
+
+---
+
+# Détecteur Tradosaure
+
+Appli web (`analyse-tradosaure/index.html`) qui cherche dans vos cours ou vos graphiques les **configurations techniques des 20 modules de la Formation intégrale Tradosaure** et les dessine sur le graphique.
+
+**Utilisation :** ouvrez `analyse-tradosaure/index.html` dans Chrome, Edge ou Firefox (double-clic). Tout est calculé sur votre ordinateur.
+
+Trois façons de donner les données :
+
+- **Valeurs** : collez des lignes `Date;Ouverture;Plus haut;Plus bas;Clôture;Volume` (virgule décimale acceptée), ou une simple liste de clôtures.
+- **Fichier** : un export CSV (Boursorama, ABC Bourse, Yahoo, Investing, ProRealTime, TradingView…).
+- **Image** : une capture d'écran d'un graphique en chandeliers colorés (ou d'une courbe). Tracez le cadre des bougies, indiquez le prix en haut et en bas du cadre, puis **Extraire** → **Analyser**.
+
+Modules couverts (règles détaillées dans la fiche en bas de l'appli et dans `moteur.js`) :
+
+| Niveau | Modules |
+|---|---|
+| I – Les essentiels | Bandes de Bollinger, Moyennes mobiles, Ichimoku, Canaux, Triangles, Biseaux, Chandeliers japonais vol. I |
+| II – Avancer | Chandeliers japonais vol. II, Stochastique et MACD, Figures d'élargissement, Épaule-Tête-Épaule, Fourchette d'Andrews, Gaps |
+| III – Approfondir | Momentum/RSI/CCI, Fibonacci, Turtle Soup revisité, Vague de Wolfe, Système 1-2-3 Dow, Optimiser les sorties, Points pivots |
+| Bonus | Doubles sommets/creux, structure de Dow |
+
+Chaque détection donne : sens, force (●○○ à ●●●), explication, et quand c'est pertinent entrée / stop / objectif. Une synthèse donne le biais des dernières barres.
+
+> Les règles sont reconstruites à partir des titres et descriptions publiques des modules et de l'analyse technique classique : les PDF eux-mêmes n'ont pas pu être lus. Pour coller au plus près des ebooks, ajustez les règles dans `analyse-tradosaure/moteur.js` (un détecteur par module). Outil d'aide, pas un conseil en investissement.

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<title>Détecteur Tradosaure</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : table de marché — à gauche le pupitre de saisie, au centre le graphe annoté, dessous le relevé des configurations puis la fiche des 20 modules. */
+:root {
+  --bg: #eef0ee;
+  --surface: #fbfcfa;
+  --sunk: #e3e7e3;
+  --ink: #1a201d;
+  --muted: #5f6a64;
+  --line: #cfd6d1;
+  --accent: #2f4fb8;
+  --accent-soft: #dfe5f8;
+  --hausse: #138a52;
+  --hausse-soft: #d6efe2;
+  --baisse: #c4372d;
+  --baisse-soft: #f7dcd8;
+  --neutre: #9a6b12;
+  --neutre-soft: #f3e6c7;
+  --grid: #e1e6e2;
+  --display: "Familjen Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614; --surface: #1a1f1c; --sunk: #232a26; --ink: #e4ebe6; --muted: #93a099; --line: #2f3833;
+    --accent: #8ea6ff; --accent-soft: #232c4d; --hausse: #3fcf8a; --hausse-soft: #163a28; --baisse: #ff7a6e; --baisse-soft: #45201c;
+    --neutre: #e2b24f; --neutre-soft: #3d3016; --grid: #242b27;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1a1f1c; --sunk: #232a26; --ink: #e4ebe6; --muted: #93a099; --line: #2f3833;
+  --accent: #8ea6ff; --accent-soft: #232c4d; --hausse: #3fcf8a; --hausse-soft: #163a28; --baisse: #ff7a6e; --baisse-soft: #45201c;
+  --neutre: #e2b24f; --neutre-soft: #3d3016; --grid: #242b27;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font: 14.5px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 48px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 20px; }
+h1 { font: 700 clamp(26px, 3.6vw, 38px)/1.05 var(--display); margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+h1 b { color: var(--accent); font-weight: 700; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+h2 { font: 600 17px/1.2 var(--display); margin: 0; text-wrap: balance; }
+.label { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.cols { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 960px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.stack { display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* onglets */
+.tabs { display: flex; gap: 4px; background: var(--sunk); padding: 4px; border-radius: 8px; }
+.tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); font: 500 13px var(--body); padding: 7px 6px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+
+textarea, input[type="text"], input[type="number"], select {
+  width: 100%; font: 13px/1.45 var(--mono); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px;
+}
+textarea { min-height: 190px; resize: vertical; white-space: pre; overflow: auto; }
+select { font-family: var(--body); padding: 6px 8px; }
+label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+button.btn { font: 600 13.5px var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 7px; padding: 8px 13px; cursor: pointer; }
+button.btn:hover { border-color: var(--accent); }
+button.btn.prim { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+button.btn:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.err { color: var(--baisse); font-size: 13px; margin: 0; }
+.drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; color: var(--muted); font-size: 13px; cursor: pointer; }
+.drop.on { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+
+/* synthèse */
+.synth { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.synth > div { background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.synth .v { font: 600 19px/1.15 var(--display); font-variant-numeric: tabular-nums; }
+.synth .verdict { font: 700 20px/1.15 var(--display); }
+@media (max-width: 760px) { .synth { grid-template-columns: 1fr 1fr; } .synth > div:first-child { grid-column: 1 / -1; } }
+.gauge { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--baisse) 0%, var(--sunk) 50%, var(--hausse) 100%); margin-top: 6px; }
+.gauge i { position: absolute; top: -4px; width: 4px; height: 16px; background: var(--ink); border-radius: 2px; transform: translateX(-50%); }
+.gauge-l { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); }
+
+/* graphique */
+.chartbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 8px; }
+.chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
+.chk input { accent-color: var(--accent); margin: 0; }
+.chartbox { position: relative; height: clamp(380px, 58vh, 620px); border-radius: 8px; background: var(--surface); touch-action: none; }
+#cv { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font: 12px/1.4 var(--mono); box-shadow: 0 4px 14px rgb(0 0 0 / .14); max-width: 280px; z-index: 2; }
+.tip b { font-family: var(--body); }
+.selinfo { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--sunk); font-size: 13.5px; display: grid; gap: 4px; }
+
+/* liste des détections */
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.list { display: grid; gap: 8px; max-height: 760px; overflow: auto; padding-right: 4px; }
+.det { display: grid; grid-template-columns: 4px minmax(0, 1fr); gap: 0 12px; padding: 10px 12px 10px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.det:hover { border-color: var(--accent); }
+.det.sel { border-color: var(--accent); background: var(--accent-soft); }
+.det .bar { border-radius: 8px 0 0 8px; margin: -10px 0; }
+.det.haussier .bar { background: var(--hausse); } .det.baissier .bar { background: var(--baisse); } .det.neutre .bar { background: var(--neutre); }
+.det .top { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.det .nom { font: 600 15px/1.25 var(--display); }
+.det .meta { font: 12px var(--mono); color: var(--muted); }
+.det p { margin: 4px 0 0; font-size: 13.5px; }
+.chip { display: inline-block; font: 500 11px/1 var(--mono); padding: 4px 6px; border-radius: 4px; letter-spacing: .03em; }
+.chip.haussier { background: var(--hausse-soft); color: var(--hausse); } .chip.baissier { background: var(--baisse-soft); color: var(--baisse); } .chip.neutre { background: var(--neutre-soft); color: var(--neutre); }
+.chip.mod { background: var(--sunk); color: var(--muted); }
+.dots { font: 12px var(--mono); color: var(--accent); letter-spacing: 1px; }
+.niveaux { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 5px; font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.niveaux span { color: var(--muted); }
+.empty { padding: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+
+/* fiche des modules */
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+td.n { font: 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .t { font-weight: 600; }
+td .r { color: var(--muted); margin-top: 3px; max-width: 80ch; }
+tr.clic { cursor: pointer; } tr.clic:hover td { background: var(--sunk); }
+
+/* image */
+.imgbox { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--sunk); touch-action: none; }
+#imgcv { display: block; width: 100%; height: auto; cursor: crosshair; }
+.small { font-size: 12px; }
+.warn { padding: 10px 12px; border-radius: 8px; background: var(--neutre-soft); color: var(--ink); font-size: 13px; }
+details summary { cursor: pointer; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Détecteur <b>Tradosaure</b></h1>
+      <p class="lede">Collez des cours, chargez un fichier CSV ou une capture de graphique : l’outil cherche les configurations des 20 modules de la formation Tradosaure (chandeliers, figures, Bollinger, Ichimoku, Dow 1-2-3, Wolfe, Turtle Soup…) et les place sur le graphe.</p>
+    </div>
+    <span class="label" id="source">Exemple chargé</span>
+  </header>
+
+  <div class="cols">
+    <!-- Pupitre de saisie -->
+    <aside class="panel stack">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-txt" aria-selected="true" data-p="p-txt">Valeurs</button>
+        <button role="tab" id="tab-csv" aria-selected="false" data-p="p-csv">Fichier</button>
+        <button role="tab" id="tab-img" aria-selected="false" data-p="p-img">Image</button>
+      </div>
+
+      <section id="p-txt" class="stack">
+        <label class="f" for="txt">Une ligne par barre : date, ouverture, plus haut, plus bas, clôture, volume. Ou juste une liste de clôtures.
+          <textarea id="txt" spellcheck="false"></textarea>
+        </label>
+        <div class="row">
+          <button class="btn prim" id="go">Analyser</button>
+          <button class="btn" id="ex">Charger l’exemple</button>
+          <button class="btn" id="vider">Vider</button>
+        </div>
+        <p class="hint">Séparateurs acceptés : point-virgule, tabulation, virgule, espace. Virgule décimale française acceptée. Colonnes reconnues par leur en-tête (Date, Ouverture, Plus haut, Plus bas, Clôture, Volume, Open, High, Low, Close…).</p>
+      </section>
+
+      <section id="p-csv" class="stack" hidden>
+        <div class="drop" id="dropcsv" tabindex="0">Déposez un fichier .csv / .txt ici<br>ou cliquez pour le choisir</div>
+        <input type="file" id="filecsv" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden>
+        <p class="hint">Exports Boursorama, ABC Bourse, Yahoo Finance, Investing, ProRealTime, TradingView… Le fichier est lu sur votre ordinateur, rien n’est envoyé.</p>
+      </section>
+
+      <section id="p-img" class="stack" hidden>
+        <div class="drop" id="dropimg" tabindex="0">Déposez une capture de graphique,<br>collez-la (Ctrl+V) ou cliquez</div>
+        <input type="file" id="fileimg" accept="image/*" hidden>
+        <div id="imgzone" class="stack" hidden>
+          <p class="hint">Tracez un rectangle sur la zone des bougies, <b>sans les axes ni la légende</b>.</p>
+          <div class="imgbox"><canvas id="imgcv"></canvas></div>
+          <div class="g2">
+            <label class="f" for="pxHaut">Prix en haut du cadre<input type="text" id="pxHaut" placeholder="ex. 112,50"></label>
+            <label class="f" for="pxBas">Prix en bas du cadre<input type="text" id="pxBas" placeholder="ex. 96"></label>
+          </div>
+          <div class="g2">
+            <label class="f" for="imgMode">Type de graphique
+              <select id="imgMode"><option value="bougies">Chandeliers colorés</option><option value="courbe">Courbe (ligne)</option></select>
+            </label>
+            <label class="f" for="imgN">Points (courbe)<input type="number" id="imgN" value="120" min="20" max="600"></label>
+          </div>
+          <div class="row">
+            <button class="btn" id="extraire">Extraire les bougies</button>
+            <button class="btn prim" id="analyserImg" disabled>Analyser</button>
+          </div>
+          <p class="hint" id="imgInfo"></p>
+        </div>
+        <p class="warn small">La lecture d’image fonctionne avec des bougies pleines vertes / rouges (ou bleues / rouges) sur fond uni, ou une courbe colorée. Sans prix saisis, l’échelle va de 0 à 100 : les figures restent justes, seuls les niveaux affichés sont relatifs.</p>
+      </section>
+
+      <p class="err" id="erreur" hidden></p>
+
+      <details>
+        <summary>Réglages</summary>
+        <div class="stack" style="margin-top:10px">
+          <label class="f" for="sens">Sensibilité des pivots (barres de chaque côté)
+            <select id="sens"><option value="">Automatique</option><option value="2">2 – très sensible</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="8">8 – grandes figures</option></select>
+          </label>
+          <label class="f" for="fen">Fenêtre de recherche des figures (barres)
+            <input type="number" id="fen" value="80" min="20" max="400">
+          </label>
+          <button class="btn" id="reanalyser">Relancer l’analyse</button>
+        </div>
+      </details>
+    </aside>
+
+    <!-- Analyse -->
+    <main class="stack">
+      <div class="synth" id="synth"></div>
+
+      <section class="panel">
+        <div class="chartbar">
+          <h2 style="margin-right:auto">Graphique annoté</h2>
+          <label class="chk"><input type="checkbox" id="o-mm" checked>Moyennes</label>
+          <label class="chk"><input type="checkbox" id="o-bb">Bollinger</label>
+          <label class="chk"><input type="checkbox" id="o-ichi">Ichimoku</label>
+          <label class="chk"><input type="checkbox" id="o-sar">SAR</label>
+          <label class="chk"><input type="checkbox" id="o-zz">Pivots</label>
+          <label class="chk"><input type="checkbox" id="o-mk" checked>Repères</label>
+          <select id="sub" style="width:auto" aria-label="Indicateur du bas">
+            <option value="rsi">RSI 14</option><option value="macd">MACD</option><option value="sto">Stochastique</option><option value="cci">CCI 20</option><option value="vol">Volume</option><option value="">Aucun</option>
+          </select>
+        </div>
+        <div class="chartbox" id="chartbox"><canvas id="cv"></canvas><div class="tip" id="tip" hidden></div></div>
+        <div class="row" style="margin-top:8px; justify-content:space-between">
+          <p class="hint">Molette ou pincement : zoom · glisser : déplacer · clic sur un repère : détail.</p>
+          <div class="row"><button class="btn" id="zoomTout">Tout voir</button><button class="btn" id="zoomFin">Dernières barres</button></div>
+        </div>
+        <div class="selinfo" id="selinfo" hidden></div>
+      </section>
+
+      <section class="panel stack">
+        <div class="row" style="justify-content:space-between">
+          <h2>Configurations trouvées</h2>
+          <span class="label" id="compte"></span>
+        </div>
+        <div class="filters">
+          <label class="f" for="fMod">Module<select id="fMod"></select></label>
+          <label class="f" for="fDir">Sens<select id="fDir"><option value="">Tous</option><option value="haussier">Haussier</option><option value="baissier">Baissier</option><option value="neutre">Neutre / en cours</option></select></label>
+          <label class="f" for="fForce">Force minimale<select id="fForce"><option value="1">●○○ toutes</option><option value="2" selected>●●○ moyenne</option><option value="3">●●● forte</option></select></label>
+          <label class="f" for="fPer">Période<select id="fPer"><option value="0">Tout l’historique</option><option value="100">100 dernières barres</option><option value="30" selected>30 dernières barres</option><option value="10">10 dernières barres</option></select></label>
+        </div>
+        <div class="list" id="list"></div>
+      </section>
+    </main>
+  </div>
+
+  <section class="panel stack">
+    <div class="row" style="justify-content:space-between">
+      <h2>Les 20 modules et les règles appliquées</h2>
+      <span class="label">Formation intégrale · niveaux I, II, III</span>
+    </div>
+    <p class="hint">Règles tirées des titres et descriptions publiques des modules et de l’analyse technique classique sur laquelle ils reposent. Cliquez une ligne pour filtrer les détections.</p>
+    <div class="tablewrap"><table id="fiche"><thead><tr><th>Niv.</th><th>Module</th><th>Détections</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <p class="hint">Outil d’aide à l’analyse, pas un conseil en investissement. Les configurations détectées automatiquement doivent être vérifiées à l’œil sur le graphique.</p>
+</div>
+
+<script src="moteur.js"></script>
+<script src="app.js"></script>
