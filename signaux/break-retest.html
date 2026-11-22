@@ -1,0 +1,337 @@
+<title>Break &amp; Retest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : colonne de lecture unique, le graphique interactif en tête, puis règles, calculateur et checklist. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#141b2b; --muted:#5a6478; --line:#dde2ea;
+  --accent:#d9731a; --accent-soft:#fbead9;
+  --up:#178a62; --down:#c8413b; --level:#3b5bdb; --zone:rgba(59,91,219,.10);
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1420; --surface:#171e2d; --ink:#e7ebf3; --muted:#98a2b6; --line:#273146;
+  --accent:#f0954a; --accent-soft:#3a2818;
+  --up:#3cc796; --down:#f0716a; --level:#7f9bff; --zone:rgba(127,155,255,.13); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#171e2d; --ink:#e7ebf3; --muted:#98a2b6; --line:#273146;
+  --accent:#f0954a; --accent-soft:#3a2818;
+  --up:#3cc796; --down:#f0716a; --level:#7f9bff; --zone:rgba(127,155,255,.13); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font:16px/1.6 var(--f-body);
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); padding-block:0 4rem}
+.wrap{max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:3.5rem}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0; line-height:1.1}
+h1{font-size:clamp(2.4rem,7vw,4.2rem); font-weight:800; letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,3.6vw,2rem); font-weight:700}
+h3{font-size:1.1rem; font-weight:700}
+p{margin:0; max-width:65ch}
+.eyebrow{font:600 .75rem/1 var(--f-mono); letter-spacing:.12em; text-transform:uppercase; color:var(--accent)}
+.mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+section{display:flex; flex-direction:column; gap:1.25rem}
+
+header{padding-top:3rem; display:flex; flex-direction:column; gap:1rem}
+.lede{font-size:1.15rem; color:var(--muted)}
+.tags{display:flex; flex-wrap:wrap; gap:.5rem}
+.tag{font:500 .8rem/1 var(--f-mono); padding:.45rem .65rem; border:1px solid var(--line); border-radius:4px; color:var(--muted); background:var(--surface)}
+
+/* Graphique */
+.chart-card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:1rem; display:flex; flex-direction:column; gap:1rem}
+.toolbar{display:flex; flex-wrap:wrap; gap:.75rem; justify-content:space-between; align-items:center}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden}
+.seg button{font:600 .85rem/1 var(--f-mono); padding:.6rem .9rem; border:0; background:transparent; color:var(--muted); cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.seg button:focus-visible,.steps button:focus-visible,.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.svg-box{overflow-x:auto}
+svg{display:block; width:100%; min-width:520px; height:auto}
+.steps{display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem}
+.steps button{text-align:left; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:6px; padding:.6rem .7rem; cursor:pointer; font:500 .85rem/1.3 var(--f-body); display:flex; flex-direction:column; gap:.25rem}
+.steps button .n{font:600 .7rem/1 var(--f-mono); color:var(--accent)}
+.steps button[aria-current="step"]{border-color:var(--accent); background:var(--accent-soft); color:var(--ink)}
+.explain{min-height:4.8rem; border-top:1px solid var(--line); padding-top:1rem; display:flex; flex-direction:column; gap:.35rem}
+.controls{display:flex; gap:.5rem}
+.btn{font:600 .85rem/1 var(--f-mono); padding:.6rem .9rem; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+@media (max-width:640px){.steps{grid-template-columns:repeat(5,minmax(0,1fr))} .steps button .t{display:none}}
+
+/* Règles */
+.rules{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.rule{background:var(--surface); padding:1.25rem; display:flex; flex-direction:column; gap:.5rem; min-width:0}
+.rule .k{font:600 .75rem/1 var(--f-mono); letter-spacing:.08em; text-transform:uppercase}
+.rule.entry .k{color:var(--level)} .rule.stop .k{color:var(--down)} .rule.tp .k{color:var(--up)} .rule.ctx .k{color:var(--accent)}
+.rule ul{margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:.3rem}
+@media (max-width:640px){.rules{grid-template-columns:1fr}}
+
+/* Pièges */
+.traps{display:flex; flex-direction:column; border-top:1px solid var(--line)}
+.trap{display:grid; grid-template-columns:12rem 1fr; gap:1rem; padding:1rem 0; border-bottom:1px solid var(--line)}
+.trap h3{font-size:1rem}
+@media (max-width:640px){.trap{grid-template-columns:1fr; gap:.3rem}}
+
+/* Calculateur */
+.calc{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:1.25rem}
+.fields{display:grid; grid-template-columns:1fr 1fr; gap:.85rem}
+.field{display:flex; flex-direction:column; gap:.3rem}
+.field label{font:500 .8rem/1.2 var(--f-body); color:var(--muted)}
+.field input,.field select{font:500 1rem/1 var(--f-mono); padding:.6rem .65rem; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); width:100%}
+.field input:focus,.field select:focus{outline:2px solid var(--accent); outline-offset:0}
+.out{display:flex; flex-direction:column; gap:.1rem; border-left:1px solid var(--line); padding-left:1.5rem}
+.row{display:flex; justify-content:space-between; gap:1rem; padding:.55rem 0; border-bottom:1px dashed var(--line); font-variant-numeric:tabular-nums}
+.row span:first-child{color:var(--muted)}
+.row b{font-family:var(--f-mono); font-weight:600}
+.row.big b{font-size:1.35rem; color:var(--accent)}
+.warn{font-size:.85rem; color:var(--down); min-height:1.2em}
+@media (max-width:700px){.calc{grid-template-columns:1fr} .out{border-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:1rem}}
+
+/* Checklist */
+.check{display:flex; flex-direction:column; gap:.5rem}
+.check label{display:flex; gap:.75rem; align-items:flex-start; padding:.75rem .9rem; border:1px solid var(--line); border-radius:6px; background:var(--surface); cursor:pointer}
+.check input{width:1.15rem; height:1.15rem; margin-top:.2rem; accent-color:var(--up); flex:none}
+.check label:has(input:checked){border-color:var(--up)}
+.score{display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+.bar{flex:1; min-width:160px; height:8px; background:var(--line); border-radius:4px; overflow:hidden}
+.bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .25s}
+.verdict{font:600 .9rem/1.2 var(--f-mono)}
+footer{font-size:.85rem; color:var(--muted); border-top:1px solid var(--line); padding-top:1.25rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Signal · Price action</span>
+    <h1>Break &amp; Retest</h1>
+    <p class="lede">Le prix casse un niveau clé, revient le tester, puis repart dans le sens de la cassure. On n'achète pas la cassure : on achète la confirmation.</p>
+    <div class="tags"><span class="tag">Continuation</span><span class="tag">Tous marchés</span><span class="tag">UT : 15m → 4H</span><span class="tag">R:R visé ≥ 1:2</span></div>
+  </header>
+
+  <section aria-labelledby="t-chart">
+    <span class="eyebrow">Le setup, étape par étape</span>
+    <h2 id="t-chart">Comment ça se déroule</h2>
+    <div class="chart-card">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Sens du trade">
+          <button id="b-long" aria-pressed="true">Long · résistance</button>
+          <button id="b-short" aria-pressed="false">Short · support</button>
+        </div>
+        <div class="controls">
+          <button class="btn" id="b-prev" aria-label="Étape précédente">←</button>
+          <button class="btn primary" id="b-next">Étape suivante →</button>
+        </div>
+      </div>
+      <div class="svg-box"><svg id="chart" viewBox="0 0 800 360" role="img" aria-label="Graphique en chandeliers d'un break and retest"></svg></div>
+      <div class="steps" id="steps"></div>
+      <div class="explain" id="explain" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-rules">
+    <span class="eyebrow">Les règles</span>
+    <h2 id="t-rules">Ce qu'il faut voir avant d'entrer</h2>
+    <div class="rules">
+      <div class="rule ctx"><span class="k">Contexte</span><ul>
+        <li>Un niveau touché au moins 2 à 3 fois (support, résistance, haut de range).</li>
+        <li>Une tendance de fond dans le sens de la cassure sur l'unité de temps supérieure.</li>
+        <li>Idéalement une compression avant la cassure (bougies qui se resserrent).</li></ul></div>
+      <div class="rule entry"><span class="k">Entrée</span><ul>
+        <li>Cassure par une bougie à grand corps qui <b>clôture</b> au-delà du niveau, avec du volume.</li>
+        <li>Attendre le retour sur le niveau cassé (le retest).</li>
+        <li>Entrer sur une bougie de rejet au retest : mèche dans la zone, clôture du bon côté.</li></ul></div>
+      <div class="rule stop"><span class="k">Stop loss</span><ul>
+        <li>Sous la mèche du retest (long) ou au-dessus (short).</li>
+        <li>Ou de l'autre côté du niveau, avec une petite marge (≈ 0,5 ATR).</li>
+        <li>Si le prix clôture franchement de l'autre côté, le setup est invalide.</li></ul></div>
+      <div class="rule tp"><span class="k">Take profit</span><ul>
+        <li>TP1 au plus haut (ou plus bas) de la cassure.</li>
+        <li>TP2 au prochain niveau clé, ou à 2R minimum.</li>
+        <li>Option : sécuriser 50 % à TP1 et passer le stop à l'entrée.</li></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-traps">
+    <span class="eyebrow">Les pièges</span>
+    <h2 id="t-traps">Quand ne pas le prendre</h2>
+    <div class="traps">
+      <div class="trap"><h3>Fausse cassure</h3><p>Une mèche passe le niveau mais la bougie clôture en dessous. Pas de clôture, pas de cassure.</p></div>
+      <div class="trap"><h3>Retest trop profond</h3><p>Le prix replonge loin dans l'ancien range et y clôture plusieurs fois. Le niveau n'a pas changé de rôle.</p></div>
+      <div class="trap"><h3>Pas de retest</h3><p>Le prix part sans revenir. Ne pas courir après : on rate un trade, on ne perd rien.</p></div>
+      <div class="trap"><h3>Contre-tendance</h3><p>Une cassure de support en pleine tendance haussière sur l'UT supérieure échoue souvent.</p></div>
+      <div class="trap"><h3>Annonce économique</h3><p>Une cassure provoquée par une news (CPI, NFP, FOMC) peut se retourner en quelques minutes.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-calc">
+    <span class="eyebrow">Gestion du risque</span>
+    <h2 id="t-calc">Calculateur de position</h2>
+    <p>Renseigne ton capital, le risque par trade, l'entrée et le stop. Le calcul donne la taille de position et les objectifs.</p>
+    <div class="calc">
+      <div class="fields">
+        <div class="field"><label for="c-cap">Capital</label><input id="c-cap" type="number" inputmode="decimal" value="1000" min="0" step="any"></div>
+        <div class="field"><label for="c-risk">Risque par trade (%)</label><input id="c-risk" type="number" inputmode="decimal" value="1" min="0" step="0.1"></div>
+        <div class="field"><label for="c-entry">Prix d'entrée</label><input id="c-entry" type="number" inputmode="decimal" value="101.5" step="any"></div>
+        <div class="field"><label for="c-stop">Stop loss</label><input id="c-stop" type="number" inputmode="decimal" value="99.6" step="any"></div>
+        <div class="field"><label for="c-rr">Ratio visé (R)</label><select id="c-rr"><option>1.5</option><option selected>2</option><option>2.5</option><option>3</option><option>4</option></select></div>
+        <div class="field"><label for="c-lev">Levier</label><input id="c-lev" type="number" inputmode="decimal" value="1" min="1" step="1"></div>
+      </div>
+      <div class="out">
+        <div class="row"><span>Sens</span><b id="o-dir">—</b></div>
+        <div class="row"><span>Montant risqué</span><b id="o-risk">—</b></div>
+        <div class="row"><span>Distance au stop</span><b id="o-dist">—</b></div>
+        <div class="row big"><span>Taille de position</span><b id="o-qty">—</b></div>
+        <div class="row"><span>Valeur de la position</span><b id="o-val">—</b></div>
+        <div class="row"><span>Marge requise</span><b id="o-margin">—</b></div>
+        <div class="row"><span>Take profit</span><b id="o-tp">—</b></div>
+        <div class="row"><span>Gain potentiel</span><b id="o-gain">—</b></div>
+        <p class="warn" id="o-warn"></p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-check">
+    <span class="eyebrow">Avant de cliquer</span>
+    <h2 id="t-check">Checklist du trade</h2>
+    <div class="check" id="check"></div>
+    <div class="score"><div class="bar"><i id="bar"></i></div><span class="verdict" id="verdict">0 / 0</span><button class="btn" id="reset">Réinitialiser</button></div>
+  </section>
+
+  <footer>Contenu éducatif, pas un conseil en investissement. Teste le setup en démo ou en backtest avant d'y mettre de l'argent réel.</footer>
+</div>
+
+<script>
+(function(){
+  // Chandeliers [open, high, low, close] du scénario long
+  const LONG = [
+    [95,96.4,94.2,96],[96,97.8,95.6,97.4],[97.4,99.9,97,99.4],[99.4,100.1,97.6,98],[98,98.4,95.8,96.3],
+    [96.3,97.9,95.9,97.6],[97.6,99.8,97.2,99.5],[99.5,100.2,98.4,98.7],[98.7,99,96.9,97.3],[97.3,98.6,97,98.4],
+    [98.4,99.6,98.1,99.3],[99.3,100,98.8,99.6],[99.6,103.6,99.4,103.2],[103.2,105.6,102.8,105.1],[105.1,106.2,104.1,104.4],
+    [104.4,104.7,102.6,102.9],[102.9,103.1,100.6,100.8],[100.8,101.7,99.7,101.5],[101.5,103.8,101.3,103.6],[103.6,105.9,103.2,105.5],
+    [105.5,107.4,105,107],[107,108.9,106.4,108.5],[108.5,110.1,107.9,109.6],[109.6,110.6,108.7,110.2]
+  ];
+  const SHORT = LONG.map(([o,h,l,c])=>[200-o,200-l,200-h,200-c]);
+  const STEPS = [
+    {t:"Niveau", h:"Repérer le niveau clé", p:"Le prix bute plusieurs fois sur le même prix. Plus il y a de contacts, plus le niveau compte.", upto:12},
+    {t:"Cassure", h:"La cassure", p:"Une bougie à grand corps clôture franchement au-delà du niveau. La mèche seule ne suffit pas.", upto:15},
+    {t:"Retest", h:"Le retour sur le niveau", p:"Le prix revient tester le niveau cassé. L'ancienne résistance doit maintenant servir de support (et inversement).", upto:18},
+    {t:"Entrée", h:"Entrée et stop", p:"La bougie de rejet au retest valide l'entrée. Le stop se place sous sa mèche, de l'autre côté du niveau.", upto:18},
+    {t:"Objectif", h:"Gestion jusqu'à l'objectif", p:"TP1 au plus haut de la cassure, TP2 à 2R ou au niveau suivant. Ici le trade atteint 4R.", upto:24}
+  ];
+  let dir = "long", step = 0;
+  const svg = document.getElementById("chart");
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, text){const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; svg.appendChild(e); return e;}
+
+  function draw(){
+    svg.innerHTML = "";
+    const data = dir==="long"?LONG:SHORT, s = STEPS[step], L = dir==="long";
+    const level = L?100:100, entry = L?101.5:98.5, stop = L?99.6:100.4, risk = Math.abs(entry-stop);
+    const tp1 = L?106.2:93.8, tp2 = L? entry+2*risk : entry-2*risk;
+    const W=800,H=360,pl=16,pr=70,pt=20,pb=28;
+    const lo = Math.min(...data.map(d=>d[2]))-1, hi = Math.max(...data.map(d=>d[1]))+1;
+    const y = v => pt + (hi-v)/(hi-lo)*(H-pt-pb);
+    const cw = (W-pl-pr)/data.length, x = i => pl + cw*i + cw/2;
+    const muted = css("--muted"), line = css("--line");
+
+    // Grille + échelle
+    for(let v=Math.ceil(lo/2)*2; v<=hi; v+=2){
+      el("line",{x1:pl,x2:W-pr,y1:y(v),y2:y(v),stroke:line,"stroke-width":1});
+      el("text",{x:W-pr+8,y:y(v)+4,fill:muted,"font-size":11,"font-family":"JetBrains Mono, monospace"},v.toFixed(0));
+    }
+    // Zone du niveau
+    el("rect",{x:pl,y:y(level+0.5),width:W-pl-pr,height:y(level-0.5)-y(level+0.5),fill:css("--zone")});
+    el("line",{x1:pl,x2:W-pr,y1:y(level),y2:y(level),stroke:css("--level"),"stroke-width":1.5,"stroke-dasharray":"6 4"});
+    el("text",{x:pl+6,y:y(level)+(L?-10:18),fill:css("--level"),"font-size":12,"font-weight":600,"font-family":"IBM Plex Sans, sans-serif"},
+      step>=2 ? (L?"Résistance → support":"Support → résistance") : (L?"Résistance":"Support"));
+
+    // Plan de trade
+    if(step>=3){
+      const x0 = x(17)-cw/2, x1 = W-pr;
+      el("rect",{x:x0,y:Math.min(y(entry),y(stop)),width:x1-x0,height:Math.abs(y(stop)-y(entry)),fill:css("--down"),opacity:.14});
+      el("rect",{x:x0,y:Math.min(y(entry),y(tp2)),width:x1-x0,height:Math.abs(y(tp2)-y(entry)),fill:css("--up"),opacity:.12});
+      const lab=(v,txt,col)=>{el("line",{x1:x0,x2:x1,y1:y(v),y2:y(v),stroke:col,"stroke-width":1.2});
+        el("text",{x:x1-6,y:y(v)-5,fill:col,"font-size":11,"text-anchor":"end","font-family":"JetBrains Mono, monospace","font-weight":600},txt+" "+v.toFixed(1));};
+      lab(entry,"Entrée",css("--ink")); lab(stop,"Stop",css("--down")); lab(tp2,"TP2 · 2R",css("--up"));
+      if(step>=4) lab(tp1,"TP1",css("--up"));
+    }
+    // Bougies
+    data.forEach((d,i)=>{
+      if(i>=s.upto) return;
+      const [o,h,l,c]=d, up=c>=o, col=up?css("--up"):css("--down");
+      el("line",{x1:x(i),x2:x(i),y1:y(h),y2:y(l),stroke:col,"stroke-width":1.4});
+      const top=y(Math.max(o,c)), bh=Math.max(1.5,Math.abs(y(o)-y(c)));
+      el("rect",{x:x(i)-cw*0.32,y:top,width:cw*0.64,height:bh,fill:col,rx:1.5});
+    });
+    // Marqueurs
+    const mark=(i,txt,above)=>{const d=data[i]; const yy=above? y(d[1])-14 : y(d[2])+22;
+      el("text",{x:x(i),y:yy,"text-anchor":"middle",fill:css("--accent"),"font-size":12,"font-weight":700,"font-family":"IBM Plex Sans, sans-serif"},txt);};
+    if(step===0){[2,6,11].forEach(i=>mark(i,"●",L));}
+    if(step>=1) mark(12,"Cassure",!L);
+    if(step>=2) mark(17,"Retest",!L);
+    // Étapes
+    document.querySelectorAll("#steps button").forEach((b,i)=>b.setAttribute("aria-current", i===step?"step":"false"));
+    document.getElementById("explain").innerHTML = `<span class="eyebrow">Étape ${step+1} / 5</span><h3>${s.h}</h3><p>${L?s.p:s.p.replace("L'ancienne résistance doit maintenant servir de support (et inversement)","L'ancien support doit maintenant servir de résistance").replace("sous sa mèche","au-dessus de sa mèche").replace("plus haut","plus bas")}</p>`;
+    document.getElementById("b-next").textContent = step===4 ? "Recommencer ↺" : "Étape suivante →";
+  }
+  const stepsBox = document.getElementById("steps");
+  STEPS.forEach((s,i)=>{const b=document.createElement("button"); b.innerHTML=`<span class="n">0${i+1}</span><span class="t">${s.t}</span>`; b.setAttribute("aria-label",s.t); b.onclick=()=>{step=i;draw();}; stepsBox.appendChild(b);});
+  document.getElementById("b-next").onclick=()=>{step=(step+1)%5; draw();};
+  document.getElementById("b-prev").onclick=()=>{step=(step+4)%5; draw();};
+  const setDir=d=>{dir=d; document.getElementById("b-long").setAttribute("aria-pressed",d==="long"); document.getElementById("b-short").setAttribute("aria-pressed",d==="short"); draw();};
+  document.getElementById("b-long").onclick=()=>setDir("long");
+  document.getElementById("b-short").onclick=()=>setDir("short");
+  step = 3; draw();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+  // Calculateur
+  const $ = id => document.getElementById(id);
+  const fmt = (v,d=2) => isFinite(v) ? v.toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d}) : "—";
+  function calc(){
+    const cap=+$("c-cap").value, rp=+$("c-risk").value, e=+$("c-entry").value, s=+$("c-stop").value, rr=+$("c-rr").value, lev=Math.max(1,+$("c-lev").value||1);
+    const dist=Math.abs(e-s), riskAmt=cap*rp/100, qty=dist>0?riskAmt/dist:NaN, val=qty*e, long=e>s;
+    const tp = long? e+rr*dist : e-rr*dist;
+    $("o-dir").textContent = dist>0 ? (long?"Long ↑":"Short ↓") : "—";
+    $("o-risk").textContent = fmt(riskAmt);
+    $("o-dist").textContent = dist>0 ? `${fmt(dist,4)} (${fmt(dist/e*100)} %)` : "—";
+    $("o-qty").textContent = fmt(qty,4);
+    $("o-val").textContent = fmt(val);
+    $("o-margin").textContent = fmt(val/lev);
+    $("o-tp").textContent = dist>0 ? fmt(tp,4) : "—";
+    $("o-gain").textContent = fmt(riskAmt*rr);
+    let w="";
+    if(!(dist>0)) w="L'entrée et le stop doivent être différents.";
+    else if(rp>2) w="Plus de 2 % de risque par trade : une série de pertes vide vite le compte.";
+    else if(val/lev>cap) w="La marge requise dépasse ton capital : augmente le levier ou réduis le risque.";
+    $("o-warn").textContent=w;
+  }
+  ["c-cap","c-risk","c-entry","c-stop","c-rr","c-lev"].forEach(id=>$(id).addEventListener("input",calc));
+  calc();
+
+  // Checklist
+  const ITEMS=[
+    "Le niveau a été touché au moins 2 fois",
+    "La tendance de l'unité de temps supérieure va dans le sens de la cassure",
+    "La bougie de cassure a clôturé au-delà du niveau",
+    "Le volume a augmenté pendant la cassure",
+    "Le prix est revenu tester le niveau sans y clôturer en profondeur",
+    "Une bougie de rejet confirme le retest",
+    "Le ratio risque / rendement est d'au moins 1:2",
+    "Aucune annonce économique majeure dans l'heure"
+  ];
+  let saved=[]; try{saved=JSON.parse(localStorage.getItem("br-check")||"[]");}catch(e){}
+  const box=$("check");
+  ITEMS.forEach((t,i)=>{const l=document.createElement("label"); l.innerHTML=`<input type="checkbox" id="ck${i}"${saved[i]?" checked":""}><span>${t}</span>`; box.appendChild(l);});
+  function score(){
+    const v=ITEMS.map((_,i)=>$("ck"+i).checked), n=v.filter(Boolean).length;
+    $("bar").style.width=(n/ITEMS.length*100)+"%";
+    $("verdict").textContent = `${n} / ${ITEMS.length} · ` + (n===ITEMS.length?"Setup valide":n>=6?"Presque, sois patient":"On attend");
+    try{localStorage.setItem("br-check",JSON.stringify(v));}catch(e){}
+  }
+  box.addEventListener("change",score);
+  $("reset").onclick=()=>{ITEMS.forEach((_,i)=>$("ck"+i).checked=false); score();};
+  score();
+})();
+</script>
