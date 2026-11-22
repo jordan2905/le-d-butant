@@ -71,7 +71,7 @@
     const r = new FileReader();
     r.onload = () => {
       let s = String(r.result);
-      if (/�/.test(s)) { const r2 = new FileReader(); r2.onload = () => fin(String(r2.result)); r2.readAsText(f, 'windows-1252'); return; }
+      if (s.includes(String.fromCharCode(0xFFFD))) { const r2 = new FileReader(); r2.onload = () => fin(String(r2.result)); r2.readAsText(f, 'windows-1252'); return; }
       fin(s);
     };
     const fin = (s) => { $('txt').value = s; try { charger(T.lireDonnees(s), f.name); erreur(''); } catch (e) { erreur(f.name + ' : ' + e.message); } };
