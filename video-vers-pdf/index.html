@@ -85,6 +85,15 @@ select, .text, input[type=range] { width: 100%; }
 input[type=range] { accent-color: var(--accent); }
 .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
 .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.mode { grid-column: 1 / -1; }
+.seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.seg label { position: relative; display: block; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; }
+.seg span { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; font-size: 13px; color: var(--muted); height: 100%; }
+.seg b { color: var(--ink); font-weight: 600; font-size: 14px; }
+.seg input:checked + span { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+body[data-mode="scroll"] .only-pause, body[data-mode="pause"] .only-scroll { display: none; }
 
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 button {
@@ -125,7 +134,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   <header>
     <div>
       <h1>Vidéo <span>→</span> PDF</h1>
-      <p class="lede">Déposez l'enregistrement d'un document qu'on feuillette. L'outil repère chaque page affichée, en fait une capture nette, puis assemble le tout en un PDF.</p>
+      <p class="lede">Déposez l'enregistrement d'un document qu'on fait défiler. L'outil recolle la vidéo en une seule bande, la découpe à chaque espace entre deux pages, puis assemble les pages en un PDF.</p>
     </div>
   </header>
 
@@ -142,8 +151,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
         <strong>Choisir ou glisser une vidéo</strong>
         <p>MP4, WebM ou MOV. Tout reste sur votre appareil, rien n'est envoyé.</p>
         <ul class="steps">
-          <li><b>Pour un bon résultat :</b> arrêtez-vous environ 1 seconde sur chaque page.</li>
-          <li><b>Cadrage :</b> tracez un rectangle sur la vidéo pour ne garder que le document.</li>
+          <li><b>Défilement continu :</b> faites défiler régulièrement, sans aller trop vite. Les pages sont découpées grâce à l'espace qui les sépare.</li>
+          <li><b>Cadrage :</b> encadrez la zone qui défile, sans les barres d'outils, en gardant un peu de fond de chaque côté des pages.</li>
         </ul>
       </label>
 
@@ -154,10 +163,33 @@ button:disabled { opacity: .45; cursor: not-allowed; }
           <div class="scanline" id="scanline" hidden></div>
         </div>
       </div>
-      <p class="hint" id="cropHint" hidden>Tracez un rectangle sur l'image pour cadrer le document. <button id="resetCrop" type="button">Tout garder</button></p>
+      <p class="hint" id="cropHint" hidden><span id="cropText"></span> <button id="resetCrop" type="button">Tout garder</button></p>
 
       <div class="controls" id="settings" hidden>
-        <div class="field">
+        <div class="field mode">
+          <span class="label">Comment le document défile</span>
+          <div class="seg" role="radiogroup" aria-label="Mode de détection">
+            <label><input type="radio" name="mode" value="scroll" id="modeScroll" checked><span><b>Défilement continu</b>Les pages se suivent, séparées par un espace</span></label>
+            <label><input type="radio" name="mode" value="pause" id="modePause"><span><b>Page par page</b>Une page à la fois, avec un arrêt sur chacune</span></label>
+          </div>
+        </div>
+        <div class="field only-scroll">
+          <label class="label" for="scrollStep">Précision</label>
+          <select id="scrollStep">
+            <option value="0.2">Rapide (5 images/s)</option>
+            <option value="0.1" selected>Normale (10 images/s)</option>
+            <option value="0.04">Fine (25 images/s)</option>
+          </select>
+        </div>
+        <div class="field only-scroll">
+          <label class="label" for="minGap">Espace minimal entre pages</label>
+          <select id="minGap">
+            <option value="2">Très fin (2 px)</option>
+            <option value="4" selected>Normal (4 px)</option>
+            <option value="10">Large (10 px)</option>
+          </select>
+        </div>
+        <div class="field only-pause">
           <label class="label" for="precision">Précision</label>
           <select id="precision">
             <option value="0.5">Rapide (2 images/s)</option>
@@ -165,7 +197,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
             <option value="0.1">Fine (10 images/s)</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field only-pause">
           <label class="label" for="hold">Pause minimale par page</label>
           <select id="hold">
             <option value="0.3">0,3 s</option>
@@ -174,11 +206,11 @@ button:disabled { opacity: .45; cursor: not-allowed; }
             <option value="1.5">1,5 s</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field only-pause">
           <label class="label" for="sens">Sensibilité aux changements</label>
           <input type="range" id="sens" min="1" max="10" value="5">
         </div>
-        <label class="check"><input type="checkbox" id="dedupe" checked> Ignorer les pages déjà vues</label>
+        <label class="check only-pause"><input type="checkbox" id="dedupe" checked> Ignorer les pages déjà vues</label>
       </div>
 
       <div class="row" id="actions" hidden>
@@ -343,7 +375,19 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     });
   }
 
-  // ---------- Détection des pages ----------
+  // ---------- Mode ----------
+  const mode = () => document.querySelector('input[name="mode"]:checked').value;
+  function applyMode() {
+    document.body.dataset.mode = mode();
+    $("cropText").textContent = mode() === "scroll"
+      ? "Encadrez la zone qui défile (sans barres d'outils), en gardant un peu de fond de chaque côté des pages."
+      : "Tracez un rectangle sur l'image pour ne garder que le document.";
+    $("analyze").textContent = "Détecter les pages";
+  }
+  document.querySelectorAll('input[name="mode"]').forEach((i) => i.addEventListener("change", applyMode));
+  applyMode();
+
+  // ---------- Lancement ----------
   $("analyze").onclick = analyze;
   $("stop").onclick = () => { stopFlag = true; };
 
@@ -352,12 +396,34 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     running = true; stopFlag = false;
     $("analyze").disabled = true; $("stop").hidden = false; $("addFrame").disabled = true;
     $("progress").hidden = false; $("scanline").hidden = false;
+    let found = 0;
+    try {
+      found = mode() === "scroll" ? await analyzeScroll() : await analyzePause();
+      $("barFill").style.width = "100%";
+      $("status").textContent = `${stopFlag ? "Arrêté" : "Terminé"} · ${found} page(s) trouvée(s)`;
+    } catch (e) {
+      console.error(e);
+      $("status").textContent = "Erreur";
+      toast(`Erreur pendant l'analyse : ${e.message || e}`, true);
+    }
+    running = false; $("analyze").disabled = false; $("stop").hidden = true; $("addFrame").disabled = false; $("scanline").hidden = true;
+    $("analyze").textContent = "Relancer la détection";
+  }
 
+  function report(t, dur, text) {
+    const pct = Math.min(100, (t / dur) * 100);
+    $("barFill").style.width = pct + "%";
+    $("scanline").style.top = pct + "%";
+    $("status").textContent = `${fmt(t)} / ${fmt(dur)} · ${text}`;
+  }
+
+  // ---------- Mode « page par page » : pages affichées immobiles ----------
+  async function analyzePause() {
     const step = Number($("precision").value);
     const hold = Number($("hold").value);
-    const sens = Number($("sens").value);                 // 1 (peu sensible) .. 10 (très sensible)
-    const motionTh = 0.004 + (10 - sens) * 0.0012;        // différence max entre 2 images pour dire « immobile »
-    const pageTh = 0.012 + (10 - sens) * 0.004;           // différence min avec la page précédente pour dire « nouvelle page »
+    const sens = Number($("sens").value);
+    const motionTh = 0.004 + (10 - sens) * 0.0012;
+    const pageTh = 0.012 + (10 - sens) * 0.004;
     const dedupe = $("dedupe").checked;
     const dur = video.duration;
     let prev = null, stableSince = null, emitted = false, found = 0;
@@ -365,30 +431,207 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     for (let t = 0; t <= dur && !stopFlag; t += step) {
       await seek(Math.min(t, dur - 0.05));
       const sig = signature();
-      const moving = diff(sig, prev) > motionTh;
-      if (moving || stableSince === null) { stableSince = t; emitted = false; }
+      if (diff(sig, prev) > motionTh || stableSince === null) { stableSince = t; emitted = false; }
       prev = sig;
-
       if (!emitted && t - stableSince >= hold - 1e-6) {
         emitted = true;
-        if (sig.std > 0.015) {                              // ignore les écrans unis (noir, blanc, transition)
+        if (sig.std > 0.015) {
           const last = pages[pages.length - 1];
           const isNew = !last || diff(sig, last.sig) > pageTh;
           const seen = dedupe && pages.some((p) => diff(sig, p.sig) <= pageTh);
           if (isNew && !seen) { await addPage(t, sig); found++; }
         }
       }
-      const pct = Math.min(100, (t / dur) * 100);
-      $("barFill").style.width = pct + "%";
-      $("scanline").style.top = pct + "%";
-      $("status").textContent = `${fmt(t)} / ${fmt(dur)} · ${found} page${found > 1 ? "s" : ""} trouvée${found > 1 ? "s" : ""}`;
+      report(t, dur, `${found} page(s) trouvée(s)`);
     }
+    if (!stopFlag && found === 0) toast("Aucune page immobile trouvée. Si le document défile en continu, choisissez « Défilement continu ».", true);
+    return found;
+  }
 
-    $("barFill").style.width = "100%";
-    $("status").textContent = stopFlag ? `Arrêté · ${found} page(s) trouvée(s)` : `Terminé · ${found} page(s) trouvée(s)`;
-    if (!stopFlag && found === 0) toast("Aucune page stable trouvée. Essayez une pause minimale plus courte ou une sensibilité plus forte.", true);
-    running = false; $("analyze").disabled = false; $("stop").hidden = true; $("addFrame").disabled = false; $("scanline").hidden = true;
-    $("analyze").textContent = "Relancer la détection";
+  // ---------- Mode « défilement continu » ----------
+  // 1) on mesure de combien l'image a défilé entre deux instants,
+  // 2) on recolle toutes les images en une longue bande,
+  // 3) on découpe la bande à chaque espace (bande de fond uni) entre deux pages.
+  const TILE = 2048, SMALL_W = 160;
+  const frameCanvas = document.createElement("canvas");
+  const fctx = frameCanvas.getContext("2d", { willReadFrequently: true });
+
+  function grayOf(ctx, w, h, colStep) {
+    const d = ctx.getImageData(0, 0, w, h).data, cw = Math.ceil(w / colStep), g = new Float32Array(cw * h);
+    for (let y = 0, j = 0; y < h; y++) for (let x = 0; x < w; x += colStep, j++) {
+      const i = (y * w + x) * 4; g[j] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255;
+    }
+    return { g, w: cw, h };
+  }
+
+  // Décalage vertical dy tel que l'image a[r] ≈ b[r - dy] (dy > 0 : le contenu est monté)
+  function matchShift(a, b, w, h, lo, hi, minOverlap, predicted, rowStep) {
+    // Quantité de détails (variations verticales) par ligne : une zone blanche ou unie
+    // ressemble à tout, elle ne doit pas l'emporter sur une zone riche en texte.
+    const tex = new Float32Array(h + 1);
+    for (let r = 1; r < h; r++) {
+      let s = 0; const i = r * w, j = (r - 1) * w;
+      for (let c = 0; c < w; c++) s += Math.abs(a[i + c] - a[j + c]);
+      tex[r + 1] = tex[r] + s / w;                      // somme cumulée
+    }
+    const cands = [];
+    let minScore = Infinity;
+    for (let dy = lo; dy <= hi; dy++) {
+      const r0 = Math.max(0, dy), r1 = Math.min(h, h + dy);
+      if (r1 - r0 < minOverlap) continue;
+      let s = 0, n = 0;
+      for (let r = r0; r < r1; r += rowStep) {
+        const ia = r * w, ib = (r - dy) * w;
+        for (let c = 0; c < w; c++) s += Math.abs(a[ia + c] - b[ib + c]);
+        n += w;
+      }
+      const err = s / n, detail = (tex[r1] - tex[r0]) / (r1 - r0);
+      const score = err / (detail + 0.01);
+      cands.push([dy, score, err]); if (score < minScore) minScore = score;
+    }
+    // Ex æquo (zones répétitives) : on garde le décalage le plus proche du mouvement précédent
+    let best = 0, bestD = Infinity, bestErr = 1;
+    for (const [dy, sc, err] of cands) if (sc <= minScore * 1.05 + 0.002 && Math.abs(dy - predicted) < bestD) { bestD = Math.abs(dy - predicted); best = dy; bestErr = err; }
+    // 3 meilleurs décalages bien distincts (pour l'affinage)
+    const top = [];
+    for (const [dy] of cands.slice().sort((x, y) => x[1] - y[1])) {
+      if (top.every((v) => Math.abs(v - dy) > 2)) top.push(dy);
+      if (top.length === 3) break;
+    }
+    if (!top.includes(best)) top.unshift(best);
+    return { dy: best, err: bestErr, score: minScore, top };
+  }
+
+  async function analyzeScroll() {
+    if (!crop) toast("Conseil : encadrez la zone qui défile pour éviter de recoller les barres d'outils.");
+    const step = Number($("scrollStep").value), dur = video.duration;
+    const { sx, sy, sw, sh } = cropPx();
+    const tiles = new Map(), timeline = [];
+    let minY = Infinity, maxY = -Infinity, y = 0, lastDy = 0, prevS = null, prevF = null;
+
+    const tile = (i) => {
+      let c = tiles.get(i);
+      if (!c) { c = document.createElement("canvas"); c.width = sw; c.height = TILE; tiles.set(i, c); }
+      return c;
+    };
+    const paint = (top) => {
+      for (let i = Math.floor(top / TILE); i <= Math.floor((top + sh - 1) / TILE); i++) tile(i).getContext("2d").drawImage(frameCanvas, 0, top - i * TILE);
+      minY = Math.min(minY, top); maxY = Math.max(maxY, top + sh);
+    };
+
+    frameCanvas.width = sw; frameCanvas.height = sh;
+    for (let t = 0; t <= dur && !stopFlag; t += step) {
+      await seek(Math.min(t, dur - 0.03));
+      const smallH = Math.max(16, Math.round(sh * SMALL_W / sw));
+      sigCanvas.width = SMALL_W; sigCanvas.height = smallH;
+      sctx.filter = "blur(1px)";                       // évite les effets de moiré sur les lignes de texte
+      sctx.drawImage(video, sx, sy, sw, sh, 0, 0, SMALL_W, smallH);
+      sctx.filter = "none";
+      const S = grayOf(sctx, SMALL_W, smallH, 1);
+      fctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+      const F = grayOf(fctx, sw, sh, 4);
+
+      if (prevS) {
+        const scale = sh / S.h, lim = Math.floor(S.h * 0.7);
+        const c = matchShift(prevS.g, S.g, S.w, S.h, -lim, lim, Math.floor(S.h * 0.3), lastDy / scale, 1);
+        // Affinage en pleine résolution autour des 3 meilleurs candidats, on garde le plus net
+        let r = null;
+        for (const dy of c.top) {
+          const pred = dy * scale;
+          const rr = matchShift(prevF.g, F.g, F.w, F.h, Math.floor(pred - scale - 2), Math.ceil(pred + scale + 2), Math.floor(sh * 0.25), pred, 2);
+          if (!r || rr.score < r.score) r = rr;
+        }
+        if (r.err > 0.07) { y = maxY + 24; lastDy = 0; }   // changement brutal : on laisse un vide = coupure
+        else { y += r.dy; lastDy = r.dy; }
+      }
+      paint(y);
+      timeline.push({ t, top: y });
+      prevS = S; prevF = F;
+      report(t, dur, `assemblage : ${Math.round((maxY - minY) / sh * 10) / 10} écran(s) de hauteur`);
+    }
+    if (minY === Infinity) return 0;
+
+    // --- Découpage aux espaces entre pages ---
+    $("status").textContent = "Découpage des pages…";
+    await new Promise((r) => setTimeout(r, 0));
+    const H = maxY - minY, mean = new Float32Array(H), std = new Float32Array(H), edge = new Float32Array(H), painted = new Uint8Array(H);
+    for (let i = Math.floor(minY / TILE); i <= Math.floor((maxY - 1) / TILE); i++) {
+      const c = tiles.get(i); if (!c) continue;
+      const d = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, sw, TILE).data;
+      for (let rr = 0; rr < TILE; rr++) {
+        const yy = i * TILE + rr - minY; if (yy < 0 || yy >= H) continue;
+        const base = rr * sw * 4;
+        if (d[base + 3] === 0) continue;
+        painted[yy] = 1;
+        let s = 0, s2 = 0, n = 0;
+        for (let x = 0; x < sw; x += 3) { const k = base + x * 4, v = (d[k] * 0.299 + d[k + 1] * 0.587 + d[k + 2] * 0.114) / 255; s += v; s2 += v * v; n++; }
+        mean[yy] = s / n; std[yy] = Math.sqrt(Math.max(0, s2 / n - (s / n) ** 2));
+        const k0 = base + 4, k1 = base + (sw - 2) * 4;
+        edge[yy] = ((d[k0] + d[k0 + 1] + d[k0 + 2]) + (d[k1] + d[k1 + 1] + d[k1 + 2])) / (6 * 255);
+      }
+    }
+    // Couleur du fond = couleur la plus fréquente sur les bords gauche/droit
+    const edges = []; for (let k = 0; k < H; k += 2) if (painted[k]) edges.push(edge[k]);
+    edges.sort((a, b) => a - b);
+    const bg = edges[Math.floor(edges.length / 2)] ?? 0.5;
+    const lightBg = bg > 0.9;
+    const isGap = (k) => !painted[k] || (std[k] < 0.035 && (lightBg ? mean[k] < 0.88 : Math.abs(mean[k] - bg) < 0.07));
+
+    const minGap = Number($("minGap").value), minPage = Math.max(40, Math.round(sw * 0.2));
+    const segs = []; let start = null, gapRun = 0;
+    for (let k = 0; k <= H; k++) {
+      const g = k === H || isGap(k);
+      if (!g) { if (start === null) start = k; gapRun = 0; }
+      else if (start !== null) { gapRun++; if (gapRun >= minGap || k === H) { segs.push([start, k - gapRun + 1]); start = null; gapRun = 0; } }
+    }
+    const pagesSegs = segs.filter(([a, b]) => b - a >= minPage);
+
+    let found = 0;
+    for (const [a, b] of pagesSegs) {
+      if (stopFlag) break;
+      const top = a + minY, h = b - a;
+      const seg = document.createElement("canvas"); seg.width = sw; seg.height = h;
+      const sctx2 = seg.getContext("2d", { willReadFrequently: true });
+      for (let i = Math.floor(top / TILE); i <= Math.floor((top + h - 1) / TILE); i++) { const c = tiles.get(i); if (c) sctx2.drawImage(c, 0, i * TILE - top); }
+      const box = lightBg ? { x: 0, y: 0, w: sw, h } : trimBox(sctx2, sw, h, bg);
+      const out = document.createElement("canvas"); out.width = box.w; out.height = box.h;
+      out.getContext("2d").drawImage(seg, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+      const seen = timeline.find((f) => f.top + sh >= top + h) || timeline[timeline.length - 1];
+      await addCanvasPage(out, seen.t);
+      found++;
+    }
+    tiles.clear();
+
+    if (!stopFlag) {
+      if (found === 0) toast("Aucune page trouvée. Vérifiez le cadrage : il doit inclure un peu de fond autour des pages.", true);
+      else if (found === 1 && H > sw * 3) toast("Aucun espace entre les pages n'a été repéré. Essayez « Espace minimal : très fin » ou élargissez le cadrage pour inclure le fond.", true);
+    }
+    return found;
+  }
+
+  // Rogne le fond autour de la page (colonnes et lignes qui ressemblent au fond)
+  function trimBox(ctx, w, h, bg) {
+    const d = ctx.getImageData(0, 0, w, h).data;
+    const off = (i) => Math.abs((d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255 - bg) > 0.08;
+    const colHit = new Uint32Array(w), rowHit = new Uint32Array(h), ys = Math.max(1, Math.floor(h / 400)), xs = Math.max(1, Math.floor(w / 400));
+    for (let y = 0; y < h; y += ys) for (let x = 0; x < w; x++) if (off((y * w + x) * 4)) colHit[x]++;
+    const rowsSampled = Math.ceil(h / ys);
+    let x0 = 0, x1 = w - 1;
+    while (x0 < w - 1 && colHit[x0] < rowsSampled * 0.5) x0++;
+    while (x1 > x0 && colHit[x1] < rowsSampled * 0.5) x1--;
+    const cols = Math.ceil((x1 - x0 + 1) / xs);
+    for (let y = 0; y < h; y++) for (let x = x0; x <= x1; x += xs) if (off((y * w + x) * 4)) rowHit[y]++;
+    let y0 = 0, y1 = h - 1;
+    while (y0 < h - 1 && rowHit[y0] < cols * 0.5) y0++;
+    while (y1 > y0 && rowHit[y1] < cols * 0.5) y1--;
+    if (x1 - x0 < w * 0.2 || y1 - y0 < h * 0.2) return { x: 0, y: 0, w, h };
+    return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+
+  async function addCanvasPage(canvas, t) {
+    const blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.92));
+    pages.push({ id: nextId++, t, sig: null, url: URL.createObjectURL(blob), blob, w: canvas.width, h: canvas.height });
+    renderPages();
   }
 
   async function addPage(t, sig) {

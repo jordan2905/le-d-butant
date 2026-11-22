@@ -52,13 +52,19 @@ Appli web (`video-vers-pdf/index.html`) : on dépose la vidéo d'un document qu'
 
 **Utilisation :** ouvrez `video-vers-pdf/index.html` dans Chrome, Edge ou Firefox (double-clic). Tout se passe sur votre ordinateur, rien n'est envoyé sur internet.
 
-1. Choisissez la vidéo.
-2. *(Optionnel)* Tracez un rectangle sur l'image pour ne garder que le document.
+Deux modes :
+
+- **Défilement continu** (par défaut) : pour une vidéo où l'on fait défiler le document. L'appli mesure le défilement entre les images, recolle la vidéo en une longue bande, puis la découpe à chaque **espace entre deux pages**. Une page n'a pas besoin de tenir entière à l'écran.
+- **Page par page** : pour une vidéo où l'on saute d'une page à l'autre. Une page est capturée quand l'image reste immobile un instant (environ 0,5 s). C'est le mode le plus fiable si la page entière tient à l'écran.
+
+Étapes :
+
+1. Choisissez la vidéo et le mode.
+2. Tracez un rectangle sur la vidéo : la zone où le document défile, **sans les barres d'outils**, en gardant **un peu de fond de chaque côté** des pages (c'est ce fond qui permet de repérer les espaces entre pages).
 3. Cliquez sur **Détecter les pages**.
-4. Supprimez les captures en trop ou ajoutez une image oubliée (**Ajouter l'image affichée**, la molette sur la vidéo permet d'avancer ou de reculer).
-5. Cliquez sur **Créer le PDF**.
+4. Supprimez les captures en trop ou ajoutez une image oubliée (**Ajouter l'image affichée** ; la molette sur la vidéo fait avancer ou reculer).
+5. Cliquez sur **Créer le PDF** (ou téléchargez un ZIP des images).
 
 **Conseils :**
-- Arrêtez-vous environ 1 seconde sur chaque page pendant l'enregistrement : une page est retenue quand l'image reste immobile assez longtemps.
-- Si des pages manquent, raccourcissez la *pause minimale* ou augmentez la *sensibilité*. S'il y a des doublons, faites l'inverse.
-- *Ignorer les pages déjà vues* évite les doublons quand on revient en arrière.
+- Défilement continu : faites défiler régulièrement, sans à-coups trop rapides. Si des pages sont mal coupées, essayez *Précision : fine*.
+- Page par page : si des pages manquent, raccourcissez la *pause minimale* ou augmentez la *sensibilité*.
