@@ -1,71 +1,79 @@
-# RSI & Alertes — module pour le classeur « watchlist_auto »
+# RSI & Alertes v2 — module pour le classeur « watchlist_auto »
 
-Ajoute à ta watchlist Google Sheets :
+Deux fichiers Apps Script à coller dans ton classeur :
 
-- **une colonne RSI journalier** (RSI de Wilder sur 14 séances, le même calcul que ProRealTime) pour chaque valeur ;
-- **des alertes RSI** avec des seuils que tu règles toi-même (30 / 70 par défaut), pour toute la liste ou valeur par valeur ;
-- **un onglet `Zones_PRT`** où tu recopies tes zones ProRealTime, avec une alerte quand le prix arrive **à moins de 3 %** (réglable) ;
-- **un contrôle automatique chaque soir** (18 h par défaut), avec un **e-mail récapitulatif** et un **journal** des alertes.
-
-## Installation (5 minutes, une seule fois)
-
-1. Ouvre le classeur **watchlist_auto** → menu **Extensions → Apps Script**.
-2. À gauche, clique sur **+ → Script** et nomme le fichier `RSI_Alertes`.
-3. Efface le contenu vide, colle tout le contenu de [`RSI_Alertes.gs`](RSI_Alertes.gs), puis **Enregistrer** (💾).
-4. En haut, choisis la fonction **`installerRsiAlertes`** puis **Exécuter**.
-5. Google demande une autorisation (lire et modifier le classeur, envoyer des e-mails en ton nom, lancer des tâches programmées) : **Autoriser**.
-   Si un écran « Google n'a pas validé cette application » apparaît : *Paramètres avancés → Accéder au projet*. C'est ton propre script.
-6. Reviens dans le classeur : un menu **📊 RSI & Alertes** apparaît, et les nouvelles colonnes sont à droite de la Watchlist.
-
-Ton script existant (menu « Zones mensuelles ») n'est pas touché : ce fichier n'a pas de fonction `onOpen`.
-
-## Ce qui est ajouté
-
-### Watchlist : 4 colonnes à droite
-
-| Colonne | Contenu |
+| Fichier | Contenu |
 |---|---|
-| **RSI (J)** | RSI journalier, recalculé automatiquement (clôtures GOOGLEFINANCE plus le cours actuel) |
-| **Zone RSI** | 🟢 Survente / 🔴 Surachat selon tes seuils |
-| **Seuil RSI bas (perso)** | Vide = seuil global. Ex. 25 pour une valeur très volatile |
-| **Seuil RSI haut (perso)** | Vide = seuil global |
+| [`RSI_Alertes.gs`](RSI_Alertes.gs) | Colonnes RSI, onglets Zones_PRT et Mes_positions, contrôle du soir, e-mail, Telegram |
+| [`Yahoo_Zones.gs`](Yahoo_Zones.gs) | Données Yahoo Finance (secours), diagnostic des tickers, zones mensuelles v2 |
 
-### Onglet `Zones_PRT` : tes zones ProRealTime
+## Ce que ça fait
 
-Tu remplis : **Ticker** (format Google Finance, ex. `EPA:MC`), **Sens** (Achat = zone sous le prix, Vente = zone au-dessus), **Zone basse** et **Zone haute**. Si tu ne mets qu'une valeur, c'est une ligne de prix.
-Le prix, la distance, le statut et le RSI se calculent seuls :
+1. **Réparations** : *Diagnostic des tickers* trouve le bon ticker des valeurs en erreur et le corrige en un clic. *Zones mensuelles v2* recalcule l'onglet « Zones » (qui affichait « Échec Google Finance ») à partir de l'historique Yahoo.
+2. **Alertes sur le téléphone** par Telegram, en plus de l'e-mail.
+3. **⭐ Confluence** : zone d'achat ProRealTime atteinte ou proche **+** RSI journalier ≤ 40 **+** prix au-dessus de la MM200. En tête de l'e-mail et du message Telegram.
+4. **Sorties de survente / surachat** : alerte le jour où le RSI repasse au-dessus de 30 (ou sous 70).
+5. **RSI hebdomadaire** : colonne `RSI (H)` dans la Watchlist, plus une alerte quand il passe en survente / surachat.
+6. **Croisements MM50 / MM200** : colonne `MM50 / MM200` (✨ golden cross / ☠️ death cross avec la date) et alerte.
+7. **Taille de position et stop** dans `Zones_PRT` : entrée, stop, quantité, montant en € et ratio gain/risque, d'après ton capital et ton risque par trade.
+8. **Mes positions** : nouvel onglet pour tes lignes CTO / PEA, avec plus-value en € et alertes stop / objectif / RSI en surachat.
 
-- 🔔 **Approche** : à moins du seuil (3 %) de la zone
-- 🎯 **Dans la zone**
-- ⚠️ **Zone cassée** (le prix est passé sous une zone d'achat) / 🚀 **Zone dépassée** (le prix est passé au-dessus d'une zone de vente)
+Et toujours : la colonne **RSI (J)**, les **seuils réglables**, l'onglet **Zones_PRT** avec l'alerte à moins de **3 %**, le **contrôle du soir** et le **Journal_alertes**.
 
-Le **Seuil perso** remplace les 3 % pour une zone. La case **Pause 🔕** coupe l'alerte d'une zone.
+## Installation (5 minutes)
 
-### Onglet Paramètres : nouveaux réglages (cases jaunes)
+1. Ouvre **watchlist_auto** → **Extensions → Apps Script**.
+2. **+ → Script**, nomme-le `RSI_Alertes`, colle le contenu de `RSI_Alertes.gs`.
+   (Si tu avais déjà collé la première version : remplace tout son contenu.)
+3. **+ → Script** encore, nomme-le `Yahoo_Zones`, colle le contenu de `Yahoo_Zones.gs`.
+4. **Enregistrer** 💾, choisis la fonction **`installerRsiAlertes`**, puis **Exécuter** → **Autoriser**.
+   Google demande d'accepter : modifier le classeur, envoyer des e-mails, lancer des tâches programmées, **se connecter à des services externes** (Yahoo Finance et Telegram).
+   Si l'écran « Google n'a pas validé cette application » s'affiche : *Paramètres avancés → Accéder au projet*.
+5. Dans le classeur, menu **📊 RSI & Alertes** :
+   1. **🩺 Diagnostic des tickers en erreur**, coche les bonnes suggestions, puis **✅ Appliquer les corrections cochées** ;
+   2. **🗓️ Recalculer les zones mensuelles (v2, Yahoo)** ;
+   3. **📱 Configurer Telegram** (voir ci-dessous) ;
+   4. **🔔 Contrôler maintenant** pour tester.
 
-| Paramètre | Défaut |
-|---|---|
-| RSI - Période | 14 |
-| RSI - Seuil bas (survente) | 30 |
-| RSI - Seuil haut (surachat) | 70 |
-| Zones PRT - Seuil d'approche | 3 % |
-| Alerte - Heure du contrôle | 18 (après la clôture de Paris à 17 h 30) |
-| Alerte - E-mail | vide = ton adresse Google |
-| Alerte - E-mail même sans nouveauté | Non |
-| Alerte - Contrôle le week-end | Non |
+Ton script existant n'est pas touché. Utilise désormais *Zones mensuelles v2* à la place de l'ancien menu *Zones mensuelles › Calculer*.
 
-Après avoir changé l'heure : menu **📊 RSI & Alertes → Activer l'alerte quotidienne**.
+### Telegram (3 minutes)
+
+1. Dans Telegram, cherche **@BotFather** → envoie `/newbot` → donne un nom → il te renvoie un **jeton**.
+2. Menu **📱 Configurer Telegram** → colle le jeton.
+3. Ouvre la conversation avec ton robot, appuie sur **Démarrer**, envoie « bonjour », puis clique **OK**. Un message de test arrive.
+
+Le jeton est enregistré dans les propriétés du script, pas dans le classeur.
+
+## Les onglets
+
+### Watchlist : 6 colonnes à droite
+`RSI (J)` (live) · `Zone RSI` · `Seuil RSI bas (perso)` · `Seuil RSI haut (perso)` · `RSI (H)` (chaque soir) · `MM50 / MM200` (chaque soir).
+
+### Zones_PRT
+Tu saisis (cases jaunes) : **Ticker, Sens (Achat/Vente), Zone basse, Zone haute**, et si tu veux **Seuil perso** et **Objectif**.
+Calculé : prix, distance, statut (🔔 approche · 🎯 dans la zone · ⚠️ cassée · 🚀 dépassée), RSI, ⭐, **Entrée** (haut de la zone), **Stop** (bas de la zone − 1 %), **Quantité** (risque 1 % du capital), **Montant €**, **Gain / risque**.
+Entrée et Stop sont des propositions : tu peux taper tes propres niveaux par-dessus.
+
+### Mes_positions
+Tu saisis : **Compte (CTO/PEA), Ticker, Quantité, PRU**, et si tu veux **Date d'achat, Stop, Objectif**.
+Calculé : prix, valeur en €, +/- value en € et en %, distance au stop et à l'objectif, RSI, statut. La ligne 3 affiche les totaux CTO / PEA.
+L'onglet Portefeuille de `complete_stock_tracker` est cassé (#REF!), donc rien n'est importé : recopie tes lignes une fois.
+
+### Paramètres (cases jaunes, en bas de l'onglet)
+Seuils RSI (30 / 70), période (14), seuil d'approche des zones (3 %), RSI max. de la confluence (40), capital et risque par trade, marge du stop, seuil stop / objectif du portefeuille, réglages des zones mensuelles, heure du contrôle (18 h), e-mail, et activation de chaque type d'alerte (Oui / Non).
 
 ## Comment marchent les alertes
 
-- Chaque soir, le script relit le RSI et les zones de toutes les valeurs.
-- Une alerte n'est envoyée **qu'une fois**, le jour où elle apparaît (🆕 dans l'e-mail). Tant que la condition dure, elle reste listée dans le récap sans être renvoyée comme nouvelle. Si elle disparaît puis revient, elle est de nouveau signalée.
-- Chaque nouvelle alerte est notée dans l'onglet **Journal_alertes**.
-- **🔔 Contrôler maintenant** lance le contrôle tout de suite, pour tester.
+- Chaque soir (18 h par défaut), le script télécharge l'historique Yahoo de toutes tes valeurs, met à jour le RSI hebdo et les croisements, puis relit tout le classeur.
+- Une alerte n'est envoyée **qu'une fois**, le jour où elle apparaît (🆕). Tant qu'elle dure, elle reste dans le récap de l'e-mail. Telegram ne reçoit que les nouvelles.
+- L'e-mail et le message Telegram sont rangés par importance : ⭐ confluences, positions, zones PRT, zones mensuelles, croisements, RSI journalier, RSI hebdo.
+- Tout est noté dans **Journal_alertes**.
 
-## Bon à savoir
+## Sources de données
 
-- Les données viennent de GOOGLEFINANCE, déjà utilisé par ta watchlist (gratuit, différé d'environ 20 min). Le RSI du soir peut différer de quelques dixièmes de celui de ProRealTime, surtout pour les valeurs américaines à 18 h, encore en séance.
-- Les 10 tickers « en erreur » du Dashboard n'auront pas de RSI (affiché `n/d`) tant que leur ticker n'est pas corrigé.
-- Si tu ajoutes des valeurs ou si tu régénères la Watchlist : menu **📊 RSI & Alertes → Mettre à jour les colonnes RSI**.
-- Outil d'aide à la décision, pas un conseil en investissement.
+- **GOOGLEFINANCE** (déjà utilisé par ta watchlist) : prix, RSI journalier live.
+- **Yahoo Finance** : RSI hebdo, croisements, zones mensuelles, et secours quand Google Finance ne connaît pas un ticker. C'est une interface non officielle, gratuite et sans clé. Si Yahoo bloque un soir, le reste continue de marcher.
+- **Investing.com** : pas utilisé. Le site n'a pas d'API publique, ses conditions d'utilisation interdisent la récupération automatique et il bloque les robots. Les cotations sont de toute façon les mêmes, puisqu'elles viennent des bourses.
+
+Outil d'aide à la décision, pas un conseil en investissement.
