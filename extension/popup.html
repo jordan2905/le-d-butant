@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Capture PDF Auto</title>
+<style>
+  body { font: 13px system-ui, sans-serif; width: 320px; margin: 0; padding: 12px; color: #222; }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  label { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  select, input[type=number] { margin-left: auto; }
+  button { width: 100%; margin-top: 6px; padding: 7px; border: 0; border-radius: 6px; background: #c62828; color: #fff; cursor: pointer; font-weight: 600; }
+  button.sec { background: #455a64; }
+  #msg { min-height: 16px; margin: 6px 0; color: #2e7d32; }
+  ul { list-style: none; padding: 0; margin: 8px 0 0; max-height: 180px; overflow: auto; }
+  li { border-top: 1px solid #eee; padding: 5px 0; word-break: break-all; font-size: 12px; }
+  li small { color: #666; }
+  hr { border: 0; border-top: 1px solid #ddd; margin: 10px 0; }
+</style>
+</head>
+<body>
+  <h1>📸 Capture PDF Auto</h1>
+  <label><input type="checkbox" id="auto"> Capture automatique des PDF ouverts</label>
+  <label><input type="checkbox" id="scanLinks"> Capturer aussi les PDF liés dans les pages</label>
+  <label>Qualité
+    <select id="scale">
+      <option value="1">Normale (72 dpi)</option>
+      <option value="2">Haute (144 dpi)</option>
+      <option value="3">Très haute (216 dpi)</option>
+    </select>
+  </label>
+  <label>Format
+    <select id="format"><option value="png">PNG</option><option value="jpeg">JPEG</option></select>
+  </label>
+  <label>Pages max par PDF <input type="number" id="maxPages" min="1" max="2000" style="width:70px"></label>
+  <hr>
+  <button id="captureTab">Capturer le PDF de cet onglet</button>
+  <button id="captureLinks" class="sec">Capturer tous les PDF liés dans cette page</button>
+  <div id="msg"></div>
+  <strong>Dernières captures</strong>
+  <ul id="history"></ul>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
